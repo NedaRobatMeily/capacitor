@@ -10,6 +10,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.util.Base64;
+import android.util.Log;
 
 import androidx.core.content.FileProvider;
 
@@ -28,6 +29,7 @@ import com.getcapacitor.plugin.camera.CameraSource;
 import com.getcapacitor.plugin.camera.CameraUtils;
 import com.getcapacitor.plugin.camera.ExifWrapper;
 import com.getcapacitor.plugin.camera.ImageUtils;
+import com.getcapacitor.plugin.camera.MediaType;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -48,13 +50,15 @@ import java.util.Date;
  * Adapted from https://developer.android.com/training/camera/photobasics.html
  */
 @NativePlugin(
-    requestCodes={Camera.REQUEST_IMAGE_CAPTURE, Camera.REQUEST_IMAGE_PICK, Camera.REQUEST_IMAGE_EDIT}
+        requestCodes={Camera.REQUEST_IMAGE_CAPTURE, Camera.REQUEST_VIDEO_PICK, Camera.REQUEST_VIDEO_CAPTURE ,Camera.REQUEST_IMAGE_PICK, Camera.REQUEST_IMAGE_EDIT}
 )
 public class Camera extends Plugin {
   // Request codes
   static final int REQUEST_IMAGE_CAPTURE = PluginRequestCodes.CAMERA_IMAGE_CAPTURE;
   static final int REQUEST_IMAGE_PICK = PluginRequestCodes.CAMERA_IMAGE_PICK;
   static final int REQUEST_IMAGE_EDIT = PluginRequestCodes.CAMERA_IMAGE_EDIT;
+  static final int REQUEST_VIDEO_PICK = PluginRequestCodes.CAMERA_VIDEO_PICK;
+  static final int REQUEST_VIDEO_CAPTURE = PluginRequestCodes.CAMERA_VIDEO_CAPTURE;
   // Message constants
   private static final String INVALID_RESULT_TYPE_ERROR = "Invalid resultType option";
   private static final String PERMISSION_DENIED_ERROR = "Unable to access camera, user denied permission request";
@@ -90,10 +94,10 @@ public class Camera extends Plugin {
         showPrompt(call);
         break;
       case CAMERA:
-        showCamera(call);
+        showCameraPhotosOrVideos(call);
         break;
       case PHOTOS:
-        showPhotos(call);
+        showPhotosOrVideos(call);
         break;
       default:
         showPrompt(call);
@@ -101,7 +105,8 @@ public class Camera extends Plugin {
     }
   }
 
-  private void showPrompt(final PluginCall call) {
+
+  private void showPromptCamera(final PluginCall call) {
     // We have all necessary permissions, open the camera
     String promptLabelPhoto = call.getString("promptLabelPhoto", "From Photos");
     String promptLabelPicture = call.getString("promptLabelPicture", "Take Picture");
@@ -179,6 +184,7 @@ public class Camera extends Plugin {
     settings.setWidth(call.getInt("width", 0));
     settings.setHeight(call.getInt("height", 0));
     settings.setShouldResize(settings.getWidth() > 0 || settings.getHeight() > 0);
+    settings.setMediaType(call.getString("mediaType"));
     settings.setShouldCorrectOrientation(call.getBoolean("correctOrientation", CameraSettings.DEFAULT_CORRECT_ORIENTATION));
     try {
       settings.setSource(CameraSource.valueOf(call.getString("source", CameraSource.PROMPT.getSource())));
@@ -486,6 +492,8 @@ public class Camera extends Plugin {
 
     if (requestCode == REQUEST_IMAGE_CAPTURE) {
       processCameraImage(savedCall);
+    } else if (requestCode == REQUEST_VIDEO_PICK || requestCode == REQUEST_VIDEO_CAPTURE) {
+      processPickedVideo(savedCall, data);
     } else if (requestCode == REQUEST_IMAGE_PICK) {
       processPickedImage(savedCall, data);
     } else if (requestCode == REQUEST_IMAGE_EDIT && resultCode == Activity.RESULT_OK) {
@@ -553,5 +561,92 @@ public class Camera extends Plugin {
       imageFileSavePath = storedImageFileSavePath;
     }
   }
+
+
+
+  // VIDEO RELATED CODE
+
+  private void showPrompt(final PluginCall call) {
+    if (settings.getMediaType() == MediaType.PHOTO) {
+      showPromptCamera(call);
+    } else {
+      showVideoPrompt(call);
+    }
+  }
+
+  private void showPhotosOrVideos(final PluginCall call) {
+    if (settings.getMediaType() == MediaType.PHOTO) {
+      showPhotos(call);
+    } else {
+      openVideos(call);
+    }
+  }
+
+  private void showCameraPhotosOrVideos(final PluginCall call) {
+    if (settings.getMediaType() == MediaType.PHOTO) {
+      showCamera(call);
+    } else {
+      openCameraForVideo(call);
+    }
+  }
+
+  private void openVideos(final PluginCall call) {
+    if (checkPhotosPermissions(call)) {
+      Intent intent = new Intent(Intent.ACTION_PICK);
+      intent.setType("video/*");
+      startActivityForResult(call, intent, REQUEST_VIDEO_PICK);
+    }
+  }
+
+  private void processPickedVideo(PluginCall call, Intent data){
+    if (data == null) {
+      call.error("No video picked");
+      return;
+    }
+    Uri videoUri = data.getData();
+
+    JSObject returnedData = new JSObject();
+    returnedData.put("path", videoUri.toString());
+    returnedData.put("webPath", FileUtils.getPortablePath(getContext(), bridge.getLocalUrl(), videoUri));
+    call.resolve(returnedData);
+  }
+
+
+  private void showVideoPrompt(final PluginCall call) {
+    // We have all necessary permissions, open the camera
+    JSObject fromPhotos = new JSObject();
+    fromPhotos.put("title", "From Gallery");
+    JSObject takePicture = new JSObject();
+    takePicture.put("title", "Record Video");
+
+    Object[] options = new Object[] {
+            fromPhotos,
+            takePicture
+    };
+
+    Dialogs.actions(getActivity(), options, new Dialogs.OnSelectListener() {
+      @Override
+      public void onSelect(int index) {
+        if (index == 0) {
+          openVideos(call);
+        } else if (index == 1) {
+          openCameraForVideo(call);
+        }
+      }
+    }, null);
+  }
+
+
+  public void openCameraForVideo(final PluginCall call) {
+    if (checkCameraPermissions(call)) {
+      Intent takePictureIntent = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
+      if (takePictureIntent.resolveActivity(getActivity().getPackageManager()) != null) {
+        startActivityForResult(call, takePictureIntent, REQUEST_VIDEO_CAPTURE);
+      } else {
+        call.error(NO_CAMERA_ACTIVITY_ERROR);
+      }
+    }
+  }
+  //// END VIDEO RELATED CODE
 
 }

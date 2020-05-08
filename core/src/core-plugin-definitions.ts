@@ -364,6 +364,12 @@ export enum CameraSource {
   Photos = 'PHOTOS'
 }
 
+export enum MediaType {
+  Prompt = 'PROMPT',
+  Photo = 'PHOTO',
+  Video = 'VIDEO'
+}
+
 export enum CameraDirection {
   Rear = 'REAR',
   Front = 'FRONT',
@@ -396,6 +402,8 @@ export interface CameraPhoto {
    * The format of the image. Currently, only "jpeg" is supported.
    */
   format: string;
+
+  mediaType? : MediaType;
 }
 
 export enum CameraResultType {

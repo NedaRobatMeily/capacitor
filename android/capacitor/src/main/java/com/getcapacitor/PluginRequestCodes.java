@@ -5,6 +5,8 @@ public class PluginRequestCodes {
   public static final int BROWSER_OPEN_CHROME_TAB = 9001;
   public static final int CAMERA_IMAGE_CAPTURE = 9002;
   public static final int CAMERA_IMAGE_PICK = 9003;
+  public static final int CAMERA_VIDEO_PICK = 9022;
+  public static final int CAMERA_VIDEO_CAPTURE = 9023;
   public static final int GEOLOCATION_REQUEST_PERMISSIONS = 9004;
   public static final int CAMERA_IMAGE_EDIT = 9005;
   public static final int NOTIFICATION_OPEN = 9006;

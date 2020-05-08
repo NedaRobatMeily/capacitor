@@ -1,6 +1,6 @@
 import { Component, ElementRef, ViewChild } from '@angular/core';
 import { IonicPage, NavController, NavParams } from 'ionic-angular';
-import { Plugins } from '@capacitor/core';
+import { Plugins, CameraResultType, MediaType } from '@capacitor/core';
 
 /**
  * Generated class for the AppPage page.
@@ -48,5 +48,29 @@ export class AppPage {
 
   async failCall() {
     await Plugins.App.openUrl({ url: null });
+  }
+
+  async takePicture() {
+    const { Camera } = Plugins;
+    const image = await Camera.getPhoto({
+      quality: 90,
+      resultType: CameraResultType.Uri
+    });
+    // image.webPath will contain a path that can be set as an image src. 
+    // You can access the original file using image.path, which can be 
+    // passed to the Filesystem API to read the raw data of the image, 
+    // if desired (or pass resultType: CameraResultType.Base64 to getPhoto)
+
+    console.log('Path returned for image' + image.webPath);
+  }
+
+  async takeVideo() {
+    const { Camera } = Plugins;
+    const video = await Camera.getPhoto({
+      resultType: CameraResultType.Uri,
+      mediaType: MediaType.Video
+    });
+
+    console.log('Path returned for video' + video.webPath);
   }
 }

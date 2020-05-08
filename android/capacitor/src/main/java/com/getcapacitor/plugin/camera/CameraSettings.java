@@ -15,6 +15,7 @@ public class CameraSettings {
     private int width = 0;
     private int height = 0;
     private CameraSource source = CameraSource.PROMPT;
+    private MediaType mediaType = MediaType.PHOTO;
 
     public CameraResultType getResultType() {
         return resultType;
@@ -82,5 +83,15 @@ public class CameraSettings {
 
     public void setSource(CameraSource source) {
         this.source = source;
+    }
+
+    public MediaType getMediaType() {
+        return mediaType;
+    }
+
+    public void setMediaType(String mediaType) {
+        if (mediaType != null && !mediaType.isEmpty()) {
+            this.mediaType = MediaType.valueOf(mediaType);
+        }
     }
 }
